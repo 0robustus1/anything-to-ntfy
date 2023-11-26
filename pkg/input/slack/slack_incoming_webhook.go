@@ -9,8 +9,7 @@ import (
 )
 
 type Params struct {
-	Publisher    publisher.Publisher
-	DefaultTopic string
+	Publisher publisher.Publisher
 }
 
 type SlackInput struct {
@@ -40,23 +39,20 @@ func (m *slackIncomingWebhookMessage) Publication() *publisher.Publication {
 }
 
 func (i *SlackInput) handleIncomingWebhook(c *fiber.Ctx) error {
-	topic := c.Params("topic", i.params.DefaultTopic)
-	if topic == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "Topic parameter must be provided")
-	}
-
 	message := &slackIncomingWebhookMessage{}
 	if err := c.BodyParser(message); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to process payload from slack incoming webhook: %v", err))
 	}
 
 	pub := message.Publication()
-	pub.Topic = topic
+	pub.Topic = c.Params("topic")
+	pub.InstanceURL = c.Query("ntfyInstance")
+	pub.Token = c.Query("ntfyToken")
 	if err := i.params.Publisher.Publish(c.UserContext(), pub); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to publish message from slack incoming webhook: %v", err))
 	}
 
-	log.Ctx(c.UserContext()).Info().Str("topic", topic).Object("publication", pub).Msg("published message")
+	log.Ctx(c.UserContext()).Info().Str("topic", pub.Topic).Object("publication", pub).Msg("published message")
 
 	return nil
 }

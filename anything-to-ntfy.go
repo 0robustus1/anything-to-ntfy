@@ -22,11 +22,11 @@ func main() {
 	_ = kong.Parse(&CLI)
 	publisher := publisher.NewNtfyPublisher(publisher.Params{
 		DefaultInstance: CLI.NtfyDefaultInstance,
+		DefaultTopic:    CLI.NtfyDefaultTopic,
 		Token:           CLI.NtfyToken,
 	})
 	slackInput := slack.NewSlackInput(slack.Params{
-		Publisher:    publisher,
-		DefaultTopic: CLI.NtfyDefaultTopic,
+		Publisher: publisher,
 	})
 
 	app := fiber.New()

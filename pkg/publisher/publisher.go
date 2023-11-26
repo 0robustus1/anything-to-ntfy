@@ -13,6 +13,7 @@ import (
 
 type Params struct {
 	DefaultInstance string
+	DefaultTopic    string
 	Token           string
 }
 
@@ -34,6 +35,8 @@ type Publication struct {
 	AttachmentURL      string `json:"attach"`
 	AttachmentFilename string `json:"filename"`
 	IconURL            string `json:"icon"`
+	InstanceURL        string `json:"-"`
+	Token              string `json:"-"`
 	Actions            []PublicationAction
 }
 
@@ -84,7 +87,11 @@ func (p *NtfyPublisher) Publish(ctx context.Context, publication *Publication) e
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", p.params.Token))
+	token := publication.Token
+	if token == "" {
+		token = p.params.Token
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := p.client.Do(req)
@@ -107,6 +114,12 @@ func (p *NtfyPublisher) Publish(ctx context.Context, publication *Publication) e
 
 func (p *NtfyPublisher) getInstanceAndTopic(publication *Publication) (instance, topic string) {
 	topic = publication.Topic
-	instance = p.params.DefaultInstance
+	if topic == "" {
+		topic = p.params.DefaultTopic
+	}
+	instance = publication.InstanceURL
+	if instance == "" {
+		instance = p.params.DefaultInstance
+	}
 	return
 }
