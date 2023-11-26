@@ -51,6 +51,7 @@ type grafanaWebhookAlert struct {
 func (i *GrafanaInput) handleWebhook(c *fiber.Ctx) error {
 	message := &grafanaWebhookMessage{}
 	if err := c.BodyParser(message); err != nil {
+		log.Ctx(c.UserContext()).Err(err).Msg("failed to process payload from grafana webhook")
 		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to process payload from grafana webhook: %v", err))
 	}
 
@@ -98,6 +99,7 @@ func (i *GrafanaInput) handleWebhook(c *fiber.Ctx) error {
 		}
 
 		if err := i.params.Publisher.Publish(c.UserContext(), pub); err != nil {
+			log.Ctx(c.UserContext()).Err(err).Str("topic", pub.Topic).Object("publication", pub).Msg("failed to publish message")
 			return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to publish message from grafana webhook: %v", err))
 		}
 
