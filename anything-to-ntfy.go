@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/0robustus1/anything-to-ntfy/pkg/input/grafana"
 	"github.com/0robustus1/anything-to-ntfy/pkg/input/slack"
 	"github.com/0robustus1/anything-to-ntfy/pkg/publisher"
 	"github.com/alecthomas/kong"
@@ -28,6 +29,9 @@ func main() {
 	slackInput := slack.NewSlackInput(slack.Params{
 		Publisher: publisher,
 	})
+	grafanaInput := grafana.NewGrafanaInput(grafana.Params{
+		Publisher: publisher,
+	})
 
 	app := fiber.New()
 	logger := log.Logger.With().Str("app", "anything-to-ntfy").Logger()
@@ -38,5 +42,6 @@ func main() {
 		return c.Next()
 	})
 	slackInput.RegisterWithRouter(app)
+	grafanaInput.RegisterWithRouter(app)
 	app.Listen(fmt.Sprintf("%s:%d", CLI.ListenHost, CLI.ListenPort))
 }
