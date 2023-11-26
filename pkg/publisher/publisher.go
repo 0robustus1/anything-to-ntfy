@@ -83,6 +83,8 @@ func (p *NtfyPublisher) Publish(ctx context.Context, publication *Publication) e
 	}
 
 	instance, topic := p.getInstanceAndTopic(publication)
+	publication.InstanceURL = instance
+	publication.Topic = topic
 	req, err := http.NewRequest("POST", instance, bytes.NewReader(payload))
 	if err != nil {
 		return err
