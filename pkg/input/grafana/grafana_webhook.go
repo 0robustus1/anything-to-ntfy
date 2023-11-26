@@ -63,7 +63,24 @@ func (i *GrafanaInput) handleWebhook(c *fiber.Ctx) error {
 			Token:       c.Query("ntfyToken"),
 			Title:       title,
 			Message:     alert.Annotations["description"],
-			Actions:     []publisher.PublicationAction{},
+			// Note only up to 3 actions are allowed
+			Actions: []publisher.PublicationAction{},
+		}
+
+		if alert.DashboardURL != "" && alert.PanelURL == "" {
+			pub.Actions = append(pub.Actions, publisher.PublicationAction{
+				Action: "view",
+				Label:  "Dashboard",
+				URL:    alert.DashboardURL,
+			})
+		}
+
+		if alert.PanelURL != "" {
+			pub.Actions = append(pub.Actions, publisher.PublicationAction{
+				Action: "view",
+				Label:  "Panel",
+				URL:    alert.PanelURL,
+			})
 		}
 
 		if alert.GeneratorURL != "" {
@@ -79,22 +96,6 @@ func (i *GrafanaInput) handleWebhook(c *fiber.Ctx) error {
 				Action: "view",
 				Label:  "Silence Alert",
 				URL:    alert.SilenceURL,
-			})
-		}
-
-		if alert.DashboardURL != "" {
-			pub.Actions = append(pub.Actions, publisher.PublicationAction{
-				Action: "view",
-				Label:  "Dashboard",
-				URL:    alert.DashboardURL,
-			})
-		}
-
-		if alert.PanelURL != "" {
-			pub.Actions = append(pub.Actions, publisher.PublicationAction{
-				Action: "view",
-				Label:  "Panel",
-				URL:    alert.PanelURL,
 			})
 		}
 
