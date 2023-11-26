@@ -49,6 +49,7 @@ require (
 	github.com/prometheus/common v0.45.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rs/zerolog v1.31.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/stripe/stripe-go/v74 v74.30.0 // indirect
 	github.com/urfave/cli/v2 v2.25.7 // indirect

@@ -1,52 +1,112 @@
 package publisher
 
 import (
-	"heckel.io/ntfy/v2/client"
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+
+	"github.com/rs/zerolog"
 )
 
 type Params struct {
-	Token string
+	DefaultInstance string
+	Token           string
 }
 
 type Publisher interface {
-	Publish(topic string, publication *Publication) error
+	Publish(ctx context.Context, publication *Publication) error
 }
 
 type Publication struct {
-	Priority string
-	Title    string
-	Message  string
+	Title              string
+	Topic              string
+	Priority           int
+	Message            string
+	MessageIsMarkdown  bool `json:"markdown"`
+	Tags               []string
+	ClickURL           string `json:"click"`
+	Delay              string
+	Email              string
+	Call               string
+	AttachmentURL      string `json:"attach"`
+	AttachmentFilename string `json:"filename"`
+	IconURL            string `json:"icon"`
+	Actions            []PublicationAction
 }
 
-func (p *Publication) PublishOptions() []client.PublishOption {
-	opts := []client.PublishOption{}
-	if p.Priority != "" {
-		opts = append(opts, client.WithPriority(p.Priority))
-	}
-	if p.Title != "" {
-		opts = append(opts, client.WithTitle(p.Title))
-	}
-	if p.Message != "" {
-		opts = append(opts, client.WithMessage(p.Message), client.WithMarkdown())
-	}
-	return opts
+type PublicationAction struct {
+	Action string
+	Label  string
+	Clear  bool
+	// for "view" and "http" action only
+	URL string
+	// for "broadcast" action only
+	Extras map[string]string
+	// for "broadcast" action only
+	Intent string
+	// for "http" action only
+	Method string
+	// for "http" action only
+	Headers map[string]string
+	// for "http" action only
+	Body string
+}
+
+func (p *Publication) MarshalZerologObject(e *zerolog.Event) {
+	e.Int("priority", p.Priority).
+		Str("title", p.Title).
+		Str("message", p.Message)
 }
 
 type NtfyPublisher struct {
-	client *client.Client
+	client *http.Client
 	params Params
 }
 
 func NewNtfyPublisher(params Params) *NtfyPublisher {
 	return &NtfyPublisher{
 		params: params,
-		client: client.New(&client.Config{}),
+		client: &http.Client{},
 	}
 }
 
-func (p *NtfyPublisher) Publish(topic string, publication *Publication) error {
-	opts := append(publication.PublishOptions(), client.WithBearerAuth(p.params.Token))
+func (p *NtfyPublisher) Publish(ctx context.Context, publication *Publication) error {
+	payload, err := json.Marshal(publication)
+	if err != nil {
+		return err
+	}
 
-	p.client.Publish(topic, "", opts...)
-	return nil
+	instance, topic := p.getInstanceAndTopic(publication)
+	req, err := http.NewRequest("POST", instance, bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", p.params.Token))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("failed to publish to topic '%s' on '%s': %s", topic, instance, body)
+	}
+
+	return err
+}
+
+func (p *NtfyPublisher) getInstanceAndTopic(publication *Publication) (instance, topic string) {
+	topic = publication.Topic
+	instance = p.params.DefaultInstance
+	return
 }

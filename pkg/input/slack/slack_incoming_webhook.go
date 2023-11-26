@@ -5,6 +5,7 @@ import (
 
 	"github.com/0robustus1/anything-to-ntfy/pkg/publisher"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog/log"
 )
 
 type Params struct {
@@ -23,6 +24,7 @@ func NewSlackInput(params Params) *SlackInput {
 }
 
 func (i *SlackInput) RegisterWithRouter(router fiber.Router) {
+	router.Post("/slack/incoming_webhook", i.handleIncomingWebhook)
 	router.Post("/slack/incoming_webhook/:topic", i.handleIncomingWebhook)
 }
 
@@ -32,7 +34,8 @@ type slackIncomingWebhookMessage struct {
 
 func (m *slackIncomingWebhookMessage) Publication() *publisher.Publication {
 	return &publisher.Publication{
-		Message: m.Text,
+		Message:           m.Text,
+		MessageIsMarkdown: true,
 	}
 }
 
@@ -47,9 +50,13 @@ func (i *SlackInput) handleIncomingWebhook(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to process payload from slack incoming webhook: %v", err))
 	}
 
-	if err := i.params.Publisher.Publish(topic, message.Publication()); err != nil {
+	pub := message.Publication()
+	pub.Topic = topic
+	if err := i.params.Publisher.Publish(c.UserContext(), pub); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to publish message from slack incoming webhook: %v", err))
 	}
+
+	log.Ctx(c.UserContext()).Info().Str("topic", topic).Object("publication", pub).Msg("published message")
 
 	return nil
 }
