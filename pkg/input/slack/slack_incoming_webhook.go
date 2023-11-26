@@ -41,6 +41,7 @@ func (m *slackIncomingWebhookMessage) Publication() *publisher.Publication {
 func (i *SlackInput) handleIncomingWebhook(c *fiber.Ctx) error {
 	message := &slackIncomingWebhookMessage{}
 	if err := c.BodyParser(message); err != nil {
+		log.Ctx(c.UserContext()).Err(err).Msg("failed to process payload from grafana webhook")
 		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to process payload from slack incoming webhook: %v", err))
 	}
 
@@ -49,6 +50,7 @@ func (i *SlackInput) handleIncomingWebhook(c *fiber.Ctx) error {
 	pub.InstanceURL = c.Query("ntfyInstance")
 	pub.Token = c.Query("ntfyToken")
 	if err := i.params.Publisher.Publish(c.UserContext(), pub); err != nil {
+		log.Ctx(c.UserContext()).Err(err).Str("topic", pub.Topic).Object("publication", pub).Msg("failed to publish message")
 		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to publish message from slack incoming webhook: %v", err))
 	}
 
