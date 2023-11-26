@@ -45,7 +45,7 @@ type grafanaWebhookAlert struct {
 	DashboardURL string
 	PanelURL     string
 	Fingerprint  string
-	Values       map[string]string
+	Values       map[string]interface{}
 }
 
 func (i *GrafanaInput) handleWebhook(c *fiber.Ctx) error {
