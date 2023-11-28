@@ -3,6 +3,7 @@ package slack
 import (
 	"fmt"
 
+	"github.com/0robustus1/anything-to-ntfy/pkg/input"
 	"github.com/0robustus1/anything-to-ntfy/pkg/publisher"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
@@ -46,15 +47,17 @@ func (i *SlackInput) handleIncomingWebhook(c *fiber.Ctx) error {
 	}
 
 	pub := message.Publication()
-	pub.Topic = c.Params("topic")
-	pub.InstanceURL = c.Query("ntfyInstance")
-	pub.Token = c.Query("ntfyToken")
-	if err := i.params.Publisher.Publish(c.UserContext(), pub); err != nil {
-		log.Ctx(c.UserContext()).Err(err).Str("topic", pub.Topic).Object("publication", pub).Msg("failed to publish message")
+	ntfyInfo := input.NtfyInfoFromFiberContext(c)
+	if err := ntfyInfo.Validate(); err != nil {
+		log.Ctx(c.UserContext()).Err(err).Str("topic", ntfyInfo.Topic).Object("publication", pub).Msg("invalid explicit ntfy config provided")
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("Failed to publish message from slack incoming webhook: %v", err))
+	}
+	if err := i.params.Publisher.Publish(c.UserContext(), pub, ntfyInfo); err != nil {
+		log.Ctx(c.UserContext()).Err(err).Str("topic", ntfyInfo.Topic).Object("publication", pub).Msg("failed to publish message")
 		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to publish message from slack incoming webhook: %v", err))
 	}
 
-	log.Ctx(c.UserContext()).Info().Str("topic", pub.Topic).Object("publication", pub).Msg("published message")
+	log.Ctx(c.UserContext()).Info().Str("topic", ntfyInfo.Topic).Object("publication", pub).Msg("published message")
 
 	return nil
 }
