@@ -48,6 +48,13 @@ type grafanaWebhookAlert struct {
 	Values       map[string]interface{}
 }
 
+func statusTag(status string) (tag string) {
+	if status == "resolved" {
+		return "white_check_mark"
+	}
+	return "rotating_light"
+}
+
 func (i *GrafanaInput) handleWebhook(c *fiber.Ctx) error {
 	message := &grafanaWebhookMessage{}
 	if err := c.BodyParser(message); err != nil {
@@ -62,6 +69,7 @@ func (i *GrafanaInput) handleWebhook(c *fiber.Ctx) error {
 			InstanceURL: c.Query("ntfyInstance"),
 			Token:       c.Query("ntfyToken"),
 			Title:       title,
+			Tags:        []string{statusTag(alert.Status)},
 			Message:     alert.Annotations["description"],
 			// Note only up to 3 actions are allowed
 			Actions: []publisher.PublicationAction{},
