@@ -12,9 +12,9 @@ import (
 )
 
 var CLI struct {
-	NtfyToken           string `env:"NTFY_TOKEN" required:"true"`
+	NtfyToken           string `env:"NTFY_TOKEN" required:"true" help:"Token to use to communicate with ntfy instance"`
 	NtfyDefaultInstance string `env:"NTFY_DEFAULT_INSTANCE" optional:"" help:"Which ntfy instance to use by default"`
-	NtfyDefaultTopic    string `env:"NTFY_DEFAULT_TOPIC" optional:""`
+	NtfyDefaultTopic    string `env:"NTFY_DEFAULT_TOPIC" optional:"" help:"Which ntfy topic to use by default"`
 	ListenHost          string `env:"LISTEN_HOST" optional:"" help:"Which host to listen on, should be an address. Defaults to empty string which is equivalent to 0.0.0.0"`
 	ListenPort          int    `env:"LISTEN_PORT" optional:"" default:"5000" help:"Which port to listen on."`
 }
