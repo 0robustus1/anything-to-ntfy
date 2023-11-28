@@ -3,6 +3,7 @@ package grafana
 import (
 	"fmt"
 
+	"github.com/0robustus1/anything-to-ntfy/pkg/input"
 	"github.com/0robustus1/anything-to-ntfy/pkg/publisher"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
@@ -56,6 +57,11 @@ func statusTag(status string) (tag string) {
 }
 
 func (i *GrafanaInput) handleWebhook(c *fiber.Ctx) error {
+	ntfyInfo := input.NtfyInfoFromFiberContext(c)
+	if err := ntfyInfo.Validate(); err != nil {
+		log.Ctx(c.UserContext()).Err(err).Str("topic", ntfyInfo.Topic).Msg("invalid explicit ntfy config provided")
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("Failed to publish message from slack incoming webhook: %v", err))
+	}
 	message := &grafanaWebhookMessage{}
 	if err := c.BodyParser(message); err != nil {
 		log.Ctx(c.UserContext()).Err(err).Msg("failed to process payload from grafana webhook")
@@ -65,12 +71,9 @@ func (i *GrafanaInput) handleWebhook(c *fiber.Ctx) error {
 	for _, alert := range message.Alerts {
 		title := fmt.Sprintf("[%s] %s: %s", alert.Status, alert.Labels["alertname"], alert.Annotations["summary"])
 		pub := &publisher.Publication{
-			Topic:       c.Params("topic"),
-			InstanceURL: c.Query("ntfyInstance"),
-			Token:       c.Query("ntfyToken"),
-			Title:       title,
-			Tags:        []string{statusTag(alert.Status)},
-			Message:     alert.Annotations["description"],
+			Title:   title,
+			Tags:    []string{statusTag(alert.Status)},
+			Message: alert.Annotations["description"],
 			// Note only up to 3 actions are allowed
 			Actions: []publisher.PublicationAction{},
 		}
@@ -107,12 +110,12 @@ func (i *GrafanaInput) handleWebhook(c *fiber.Ctx) error {
 			})
 		}
 
-		if err := i.params.Publisher.Publish(c.UserContext(), pub); err != nil {
-			log.Ctx(c.UserContext()).Err(err).Str("topic", pub.Topic).Object("publication", pub).Msg("failed to publish message")
+		if err := i.params.Publisher.Publish(c.UserContext(), pub, ntfyInfo); err != nil {
+			log.Ctx(c.UserContext()).Err(err).Str("topic", ntfyInfo.Topic).Object("publication", pub).Msg("failed to publish message")
 			return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to publish message from grafana webhook: %v", err))
 		}
 
-		log.Ctx(c.UserContext()).Info().Str("topic", pub.Topic).Object("publication", pub).Msg("published message")
+		log.Ctx(c.UserContext()).Info().Str("topic", ntfyInfo.Topic).Object("publication", pub).Msg("published message")
 	}
 
 	return nil

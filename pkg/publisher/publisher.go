@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/0robustus1/anything-to-ntfy/pkg/input"
 	"github.com/rs/zerolog"
 )
 
@@ -18,7 +19,7 @@ type Params struct {
 }
 
 type Publisher interface {
-	Publish(ctx context.Context, publication *Publication) error
+	Publish(ctx context.Context, publication *Publication, ntfyInfo *input.NtfyInfo) error
 }
 
 type Publication struct {
@@ -35,8 +36,6 @@ type Publication struct {
 	AttachmentURL      string `json:"attach"`
 	AttachmentFilename string `json:"filename"`
 	IconURL            string `json:"icon"`
-	InstanceURL        string `json:"-"`
-	Token              string `json:"-"`
 	Actions            []PublicationAction
 }
 
@@ -76,24 +75,21 @@ func NewNtfyPublisher(params Params) *NtfyPublisher {
 	}
 }
 
-func (p *NtfyPublisher) Publish(ctx context.Context, publication *Publication) error {
+func (p *NtfyPublisher) Publish(ctx context.Context, publication *Publication, ntfyInfo *input.NtfyInfo) error {
 	payload, err := json.Marshal(publication)
 	if err != nil {
 		return err
 	}
+	if err := ntfyInfo.Validate(); err != nil {
+		return err
+	}
 
-	instance, topic := p.getInstanceAndTopic(publication)
-	publication.InstanceURL = instance
-	publication.Topic = topic
-	req, err := http.NewRequest("POST", instance, bytes.NewReader(payload))
+	p.applyNtfyDefaults(publication, ntfyInfo)
+	req, err := http.NewRequest("POST", ntfyInfo.InstanceURL, bytes.NewReader(payload))
 	if err != nil {
 		return err
 	}
-	token := publication.Token
-	if token == "" {
-		token = p.params.Token
-	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ntfyInfo))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := p.client.Do(req)
@@ -108,20 +104,21 @@ func (p *NtfyPublisher) Publish(ctx context.Context, publication *Publication) e
 	}
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("failed to publish to topic '%s' on '%s': %s", topic, instance, body)
+		return fmt.Errorf("failed to publish to topic '%s' on '%s': %s", ntfyInfo.Topic, ntfyInfo.InstanceURL, body)
 	}
 
 	return err
 }
 
-func (p *NtfyPublisher) getInstanceAndTopic(publication *Publication) (instance, topic string) {
-	topic = publication.Topic
-	if topic == "" {
-		topic = p.params.DefaultTopic
+func (p *NtfyPublisher) applyNtfyDefaults(publication *Publication, ntfyInfo *input.NtfyInfo) {
+	if ntfyInfo.Topic == "" {
+		ntfyInfo.Topic = p.params.DefaultTopic
 	}
-	instance = publication.InstanceURL
-	if instance == "" {
-		instance = p.params.DefaultInstance
+	if ntfyInfo.InstanceURL == "" {
+		ntfyInfo.InstanceURL = p.params.DefaultInstance
 	}
-	return
+	if ntfyInfo.Token == "" {
+		ntfyInfo.Token = p.params.Token
+	}
+	publication.Topic = ntfyInfo.Topic
 }
