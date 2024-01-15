@@ -89,7 +89,7 @@ func (p *NtfyPublisher) Publish(ctx context.Context, publication *Publication, n
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ntfyInfo))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ntfyInfo.Token))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := p.client.Do(req)
