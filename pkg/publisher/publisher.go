@@ -76,6 +76,7 @@ func NewNtfyPublisher(params Params) *NtfyPublisher {
 }
 
 func (p *NtfyPublisher) Publish(ctx context.Context, publication *Publication, ntfyInfo *input.NtfyInfo) error {
+	p.applyNtfyDefaults(publication, ntfyInfo)
 	payload, err := json.Marshal(publication)
 	if err != nil {
 		return err
@@ -84,7 +85,6 @@ func (p *NtfyPublisher) Publish(ctx context.Context, publication *Publication, n
 		return err
 	}
 
-	p.applyNtfyDefaults(publication, ntfyInfo)
 	req, err := http.NewRequest("POST", ntfyInfo.InstanceURL, bytes.NewReader(payload))
 	if err != nil {
 		return err
