@@ -100,7 +100,7 @@ var playbookKeys = []string{"playbook_url", "runbook_url"}
 
 func playbookURL(alert *template.Alert) (key, url string) {
 	for _, checkKey := range playbookKeys {
-		if val, ok := alert.Labels[checkKey]; ok {
+		if val, ok := alert.Annotations[checkKey]; ok {
 			key = checkKey
 			url = val
 			return
