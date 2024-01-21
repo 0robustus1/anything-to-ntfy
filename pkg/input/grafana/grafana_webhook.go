@@ -60,7 +60,7 @@ func (i *GrafanaInput) handleWebhook(c *fiber.Ctx) error {
 	ntfyInfo := input.NtfyInfoFromFiberContext(c)
 	if err := ntfyInfo.Validate(); err != nil {
 		log.Ctx(c.UserContext()).Err(err).Str("topic", ntfyInfo.Topic).Msg("invalid explicit ntfy config provided")
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("Failed to publish message from slack incoming webhook: %v", err))
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("Failed to publish message from grafana webhook: %v", err))
 	}
 	message := &grafanaWebhookMessage{}
 	if err := c.BodyParser(message); err != nil {
