@@ -9,6 +9,7 @@ import (
 	"github.com/0robustus1/anything-to-ntfy/pkg/publisher"
 	"github.com/alecthomas/kong"
 	"github.com/gofiber/fiber/v2"
+	"github.com/prometheus/common/version"
 	"github.com/rs/zerolog/log"
 )
 
@@ -18,10 +19,15 @@ var CLI struct {
 	NtfyDefaultTopic    string `env:"NTFY_DEFAULT_TOPIC" optional:"" help:"Which ntfy topic to use by default"`
 	ListenHost          string `env:"LISTEN_HOST" optional:"" help:"Which host to listen on, should be an address. Defaults to empty string which is equivalent to 0.0.0.0"`
 	ListenPort          int    `env:"LISTEN_PORT" optional:"" default:"5000" help:"Which port to listen on."`
+	Version             bool   `long:"version" help:"Prints the version"`
 }
 
 func main() {
 	_ = kong.Parse(&CLI)
+	if CLI.Version {
+		fmt.Println(version.Print("anything-to-ntfy"))
+		return
+	}
 	publisher := publisher.NewNtfyPublisher(publisher.Params{
 		DefaultInstance: CLI.NtfyDefaultInstance,
 		DefaultTopic:    CLI.NtfyDefaultTopic,
