@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/0robustus1/anything-to-ntfy/pkg/input/alertmanager"
 	"github.com/0robustus1/anything-to-ntfy/pkg/input/grafana"
 	"github.com/0robustus1/anything-to-ntfy/pkg/input/slack"
 	"github.com/0robustus1/anything-to-ntfy/pkg/publisher"
@@ -32,6 +33,9 @@ func main() {
 	grafanaInput := grafana.NewGrafanaInput(grafana.Params{
 		Publisher: publisher,
 	})
+	alertmanagerInput := alertmanager.NewAlertmanagerInput(alertmanager.Params{
+		Publisher: publisher,
+	})
 
 	app := fiber.New()
 	logger := log.Logger.With().Str("app", "anything-to-ntfy").Logger()
@@ -43,5 +47,6 @@ func main() {
 	})
 	slackInput.RegisterWithRouter(app)
 	grafanaInput.RegisterWithRouter(app)
+	alertmanagerInput.RegisterWithRouter(app)
 	app.Listen(fmt.Sprintf("%s:%d", CLI.ListenHost, CLI.ListenPort))
 }
